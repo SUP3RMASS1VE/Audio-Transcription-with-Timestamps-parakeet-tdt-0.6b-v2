@@ -4,3 +4,5 @@ nemo_toolkit[asr]>=2.0.0
 soundfile>=0.12.1
 requests>=2.0.0 
 cuda-python>=12.3
+pydantic==2.10.6
+
