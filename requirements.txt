@@ -1,0 +1,6 @@
+gradio>=4.0.0
+pandas>=2.0.0
+nemo_toolkit[asr]>=2.0.0
+soundfile>=0.12.1
+requests>=2.0.0 
+cuda-python>=12.3
