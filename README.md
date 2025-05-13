@@ -12,7 +12,7 @@ This is a Gradio web application that uses NVIDIA's Parakeet-TDT-0.6b model for 
 
 ## Screenshot
 
-![App Screenshot](https://i.imgur.com/yourimageurl.png)
+![Screenshot 2025-05-13 142033](https://github.com/user-attachments/assets/8014d5a7-931a-47e3-9855-01f3f8bb934e)
 
 ## Setup and Installation
 
