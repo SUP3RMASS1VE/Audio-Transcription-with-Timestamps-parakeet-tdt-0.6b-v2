@@ -5,6 +5,7 @@ import nemo.collections.asr as nemo_asr
 import os
 from pathlib import Path
 import tempfile
+import numpy as np
 
 # Create a directory for example audio files if it doesn't exist
 EXAMPLE_DIR = Path("examples")
@@ -36,11 +37,29 @@ def transcribe_audio(audio_file, progress=gr.Progress()):
         temp_audio.close()
         
         sample_rate, audio_data = audio_file
+        
+        # Convert stereo to mono if needed
+        if len(audio_data.shape) > 1 and audio_data.shape[1] > 1:
+            audio_data = np.mean(audio_data, axis=1)
+        
         import soundfile as sf
         sf.write(temp_audio_path, audio_data, sample_rate)
         audio_path = temp_audio_path
     else:
-        audio_path = audio_file
+        # For files uploaded directly, we need to convert if stereo
+        import soundfile as sf
+        audio_data, sample_rate = sf.read(audio_file)
+        
+        # Convert stereo to mono if needed
+        if len(audio_data.shape) > 1 and audio_data.shape[1] > 1:
+            audio_data = np.mean(audio_data, axis=1)
+            temp_audio = tempfile.NamedTemporaryFile(suffix='.wav', delete=False)
+            temp_audio_path = temp_audio.name
+            temp_audio.close()
+            sf.write(temp_audio_path, audio_data, sample_rate)
+            audio_path = temp_audio_path
+        else:
+            audio_path = audio_file
     
     progress(0.3, desc="Transcribing audio...")
     
