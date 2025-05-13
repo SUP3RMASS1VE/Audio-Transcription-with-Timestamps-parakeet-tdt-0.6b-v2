@@ -7,10 +7,6 @@ from pathlib import Path
 import tempfile
 import numpy as np
 
-# Create a directory for example audio files if it doesn't exist
-EXAMPLE_DIR = Path("examples")
-EXAMPLE_DIR.mkdir(exist_ok=True)
-
 # Function to load the parakeet TDT model
 def load_model():
     # Load the model from HuggingFace
@@ -22,7 +18,7 @@ def load_model():
 # Global model variable to avoid reloading
 model = None
 
-def transcribe_audio(audio_file, progress=gr.Progress()):
+def transcribe_audio(audio_file, is_music=False, progress=gr.Progress()):
     global model
     
     # Load the model if not already loaded
@@ -53,6 +49,30 @@ def transcribe_audio(audio_file, progress=gr.Progress()):
         # Convert stereo to mono if needed
         if len(audio_data.shape) > 1 and audio_data.shape[1] > 1:
             audio_data = np.mean(audio_data, axis=1)
+            
+            # For music, apply some preprocessing to improve vocal separation
+            if is_music:
+                try:
+                    # Normalize audio
+                    audio_data = audio_data / np.max(np.abs(audio_data))
+                    
+                    # Apply a simple high-pass filter to emphasize vocals (at 200Hz)
+                    from scipy import signal
+                    b, a = signal.butter(4, 200/(sample_rate/2), 'highpass')
+                    audio_data = signal.filtfilt(b, a, audio_data)
+                    
+                    # Slight compression to bring up quieter vocals
+                    threshold = 0.1
+                    ratio = 0.5
+                    audio_data = np.where(
+                        np.abs(audio_data) > threshold,
+                        threshold + (np.abs(audio_data) - threshold) * ratio * np.sign(audio_data),
+                        audio_data
+                    )
+                except ImportError:
+                    # If scipy is not available, skip preprocessing
+                    pass
+            
             temp_audio = tempfile.NamedTemporaryFile(suffix='.wav', delete=False)
             temp_audio_path = temp_audio.name
             temp_audio.close()
@@ -63,7 +83,7 @@ def transcribe_audio(audio_file, progress=gr.Progress()):
     
     progress(0.3, desc="Transcribing audio...")
     
-    # Transcribe with timestamps
+    # Transcribe with timestamps - Removed decoder_params as it's not supported
     output = model.transcribe([audio_path], timestamps=True)
     
     # Extract segment-level timestamps
@@ -78,6 +98,17 @@ def transcribe_audio(audio_file, progress=gr.Progress()):
             segment_text = stamp['segment']
             start_time = stamp['start']
             end_time = stamp['end']
+            
+            # For music, we can do some post-processing of the timestamps
+            if is_music:
+                # Add a small buffer to ensure segments don't cut off too early
+                # This helps with stretched syllables often found in singing
+                end_time += 0.3
+                
+                # Minimum segment duration for lyrics
+                min_duration = 0.5
+                if end_time - start_time < min_duration:
+                    end_time = start_time + min_duration
             
             segments.append({
                 "text": segment_text,
@@ -154,20 +185,6 @@ def create_transcript_table(segments):
     html += "</table>"
     return html
 
-def download_example():
-    # URL for an example file - we'll use a sample from LibriSpeech
-    url = "https://dldata-public.s3.us-east-2.amazonaws.com/2086-149220-0033.wav"
-    import requests
-    
-    example_path = EXAMPLE_DIR / "example-audio.wav"
-    if not example_path.exists():
-        print(f"Downloading example audio to {example_path}...")
-        response = requests.get(url)
-        with open(example_path, 'wb') as f:
-            f.write(response.content)
-    
-    return str(example_path)
-
 # Define custom JavaScript to handle segment playback
 js_code = """
 function(audio) {
@@ -204,7 +221,7 @@ with gr.Blocks(css="footer {visibility: hidden}") as app:
             with gr.Tab("Microphone"):
                 audio_record = gr.Audio(sources=["microphone"], type="filepath", label="Record Audio")
             
-            example_btn = gr.Button("Load Example Audio")
+            is_music = gr.Checkbox(label="Music mode (better for songs)", info="Enable for more accurate song timestamps")
             transcribe_btn = gr.Button("Transcribe Uploaded File", variant="primary")
         
         with gr.Column():
@@ -214,20 +231,17 @@ with gr.Blocks(css="footer {visibility: hidden}") as app:
             csv_output = gr.File(label="Download Transcript CSV")
             audio_playback = gr.Audio(label="Audio Playback", elem_id="audio_playback", interactive=False)
     
-    # Set up event handlers
-    example_btn.click(download_example, outputs=audio_input)
-    
     # Handle transcription from file upload
     transcribe_btn.click(
         transcribe_audio, 
-        inputs=[audio_input],
+        inputs=[audio_input, is_music],
         outputs=[full_transcript, transcript_segments, csv_output]
     )
     
     # Handle transcription from microphone
     audio_record.stop_recording(
         transcribe_audio,
-        inputs=[audio_record],
+        inputs=[audio_record, is_music],
         outputs=[full_transcript, transcript_segments, csv_output]
     )
     
