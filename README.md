@@ -1,4 +1,4 @@
-# Audio Transcription App with Parakeet-TDT-0.6b
+# Audio Transcription App with Parakeet-TDT-0.6b-v2
 
 This is a Gradio web application that uses NVIDIA's Parakeet-TDT-0.6b model for automatic speech recognition with timestamp functionality.
 
@@ -12,18 +12,23 @@ This is a Gradio web application that uses NVIDIA's Parakeet-TDT-0.6b model for 
 
 ## Screenshot
 
-![Screenshot 2025-05-13 142033](https://github.com/user-attachments/assets/8014d5a7-931a-47e3-9855-01f3f8bb934e)
+![Screenshot 2025-05-13 142033](https://github.com/user-attachments/assets/5e5627c9-3b76-40a3-9d6b-a789d79c9358)
 
 ## Setup and Installation
+ 
+Install via [Pinokio](https://pinokio.computer).
+
+---
 
 1. Clone this repository:
    ```
-   git clone <repository-url>
-   cd <repository-directory>
+   git clone https://github.com/SUP3RMASS1VE/Audio-Transcription-with-Timestamps-parakeet-tdt-0.6b-v2.git
+   cd Audio-Transcription-with-Timestamps-parakeet-tdt-0.6b-v2
    ```
 
 2. Install the required dependencies:
    ```
+   pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu126
    pip install -r requirements.txt
    ```
 
